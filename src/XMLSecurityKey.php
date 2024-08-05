@@ -186,10 +186,10 @@ class XMLSecurityKey
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::RSA_OAEP_MGF1P):
-                $this->cryptParams['library'] = 'openssl';
-                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
-                $this->cryptParams['hash'] = null;
+                $this->cryptParams['digest'] = 'sha1';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -648,7 +648,11 @@ class XMLSecurityKey
             }
         } else if($this->cryptParams['library'] === 'phpseclib') {
             $private = PublicKeyLoader::load($this->key);
-            $result = $private->withMGFHash('sha256')->decrypt($data);
+            $result = $private
+                ->withPadding($this->cryptParams['padding'])
+                ->withHash($this->cryptParams['digest'])
+                ->withMGFHash($this->cryptParams['digest'])
+                ->decrypt($data);
             return $result;
         }
     }
@@ -666,7 +670,11 @@ class XMLSecurityKey
                 return $this->signOpenSSL($data);
             case 'phpseclib':
                 $private = PublicKeyLoader::load($this->key);
-                return $private->withPadding(RSA::SIGNATURE_PSS)->sign($data);
+                return $private
+                    ->withPadding($this->cryptParams['padding'])
+                    ->withHash($this->cryptParams['digest'])
+                    ->withMGFHash($this->cryptParams['digest'])
+                    ->sign($data);
             case (self::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
         }
@@ -695,7 +703,11 @@ class XMLSecurityKey
                 return $this->verifyOpenSSL($data, $signature);
             case 'phpseclib':
                 $public = PublicKeyLoader::load($this->key);
-                return $public->withPadding(RSA::SIGNATURE_PSS)->verify($data, $signature);
+                return $public
+                    ->withPadding($this->cryptParams['padding'])
+                    ->withHash($this->cryptParams['digest'])
+                    ->withMGFHash($this->cryptParams['digest'])
+                    ->verify($data, $signature);
             case (self::HMAC_SHA1):
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return strcmp($signature, $expectedSignature) == 0;
