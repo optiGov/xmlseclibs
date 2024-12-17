@@ -703,11 +703,12 @@ class XMLSecurityKey
                 return $this->verifyOpenSSL($data, $signature);
             case 'phpseclib':
                 $public = PublicKeyLoader::load($this->key);
-                return $public
+                $result = $public
                     ->withPadding($this->cryptParams['padding'])
                     ->withHash($this->cryptParams['digest'])
                     ->withMGFHash($this->cryptParams['digest'])
                     ->verify($data, $signature);
+                return $result === true ? 1 : 0;
             case (self::HMAC_SHA1):
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return strcmp($signature, $expectedSignature) == 0;
