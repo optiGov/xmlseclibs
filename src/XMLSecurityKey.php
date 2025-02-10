@@ -198,10 +198,10 @@ class XMLSecurityKey
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::RSA_OAEP):
-                $this->cryptParams['library'] = 'openssl';
-                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#rsa-oaep';
-                $this->cryptParams['hash'] = 'http://www.w3.org/2009/xmlenc11#mgf1sha1';
+                $this->cryptParams['digest'] = 'sha256';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -387,17 +387,17 @@ class XMLSecurityKey
         if ($this->cryptParams['library'] == 'openssl') {
             switch ($this->cryptParams['type']) {
                 case 'public':
-	                if ($isCert) {
-	                    /* Load the thumbprint if this is an X509 certificate. */
-	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
-	                }
-	                $this->key = openssl_get_publickey($this->key);
-	                if (! $this->key) {
-	                    throw new Exception('Unable to extract public key');
-	                }
-	                break;
+                    if ($isCert) {
+                        /* Load the thumbprint if this is an X509 certificate. */
+                        $this->X509Thumbprint = self::getRawThumbprint($this->key);
+                    }
+                    $this->key = openssl_get_publickey($this->key);
+                    if (! $this->key) {
+                        throw new Exception('Unable to extract public key');
+                    }
+                    break;
 
-	            case 'private':
+                case 'private':
                     $this->key = openssl_get_privatekey($this->key, $this->passphrase);
                     if ($this->key === false) {
                         throw new Exception('Unable to extract private key (invalid key or passphrase): ' . openssl_error_string());
